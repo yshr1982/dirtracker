@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dirtracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #1e1e1e;
+      --bg2:       #252526;
+      --bg3:       #2d2d2d;
+      --border:    #3e3e42;
+      --fg:        #d4d4d4;
+      --fg-dim:    #858585;
+      --accent:    #0e639c;
+      --accent-hv: #1177bb;
+      --active:    #094771;
+      --green:     #4ec9b0;
+      --red:       #f48771;
+      --purple:    #c586c0;
+    }
+
+    body {
+      font-family: 'Consolas', 'Menlo', monospace;
+      background: var(--bg);
+      color: var(--fg);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 0.95rem; letter-spacing: 0.05em; }
+    header h1 span { color: var(--accent-hv); }
+
+    .header-actions { display: flex; gap: 6px; align-items: center; }
+
+    /* ── Buttons ── */
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      border-radius: 2px;
+      font-family: inherit;
+      transition: background 0.1s;
+    }
+    button:hover:not(:disabled) { background: var(--accent-hv); }
+    button:disabled { background: #444; color: #777; cursor: default; }
+    button.ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg-dim);
+    }
+    button.ghost:hover:not(:disabled) { background: var(--bg3); color: var(--fg); }
+    button.active-view {
+      background: var(--active);
+    }
+
+    /* ── Three-pane layout ── */
+    main {
+      display: grid;
+      grid-template-columns: 270px 260px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .pane {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .pane:last-child { border-right: none; }
+
+    .pane-header {
+      padding: 6px 10px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--fg-dim);
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pane-body { flex: 1; overflow-y: auto; }
+
+    /* ── File list ── */
+    .file-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      padding: 5px 8px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--bg3);
+    }
+    .file-item:hover  { background: #2a2d2e; }
+    .file-item.active { background: var(--active); }
+
+    .file-item input[type=checkbox] {
+      flex-shrink: 0;
+      margin-top: 2px;
+      accent-color: var(--accent-hv);
+    }
+    .file-path {
+      font-size: 0.78rem;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    /* ── Snapshot list ── */
+    .snap-item {
+      padding: 7px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--bg3);
+    }
+    .snap-item:hover  { background: #2a2d2e; }
+    .snap-item.active { background: var(--active); }
+    .snap-ts { font-size: 0.75rem; color: #9cdcfe; }
+    .snap-ev {
+      display: inline-block;
+      font-size: 0.68rem;
+      padding: 1px 7px;
+      border-radius: 9px;
+      margin-top: 3px;
+    }
+    .snap-ev.modified { background: #1c3f6e; color: #9cdcfe; }
+    .snap-ev.created  { background: #1a3a1a; color: var(--green); }
+    .snap-ev.deleted  { background: #4a1515; color: var(--red); }
+
+    /* ── Content pane ── */
+    .content-toolbar {
+      display: flex;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .content-body {
+      flex: 1;
+      overflow: auto;
+      padding: 12px 14px;
+    }
+
+    pre {
+      font-size: 0.8rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Diff highlighting */
+    .diff-add  { background: #142a14; color: var(--green); display: block; }
+    .diff-del  { background: #2e1010; color: var(--red);   display: block; }
+    .diff-hunk { color: var(--purple); display: block; }
+    .diff-meta { color: var(--fg-dim); display: block; }
+
+    .empty {
+      color: var(--fg-dim);
+      padding: 16px 12px;
+      font-size: 0.82rem;
+    }
+
+    /* ── Status bar ── */
+    footer {
+      background: #007acc;
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 3px 14px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #status-right { opacity: 0.75; }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #777; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <h1>dir<span>tracker</span></h1>
+  <div class="header-actions">
+    <button id="btn-export-selected" disabled>選択をエクスポート</button>
+    <button id="btn-export-all" class="ghost">全ファイルをエクスポート</button>
+    <button id="btn-refresh" class="ghost">更新</button>
+  </div>
+</header>
+
+<!-- ── Three-pane ── -->
+<main>
+
+  <!-- Pane 1: Files -->
+  <div class="pane">
+    <div class="pane-header">
+      <span>ファイル</span>
+      <span id="file-count" style="color:var(--fg)"></span>
+    </div>
+    <div class="pane-body" id="file-list">
+      <div class="empty">読み込み中...</div>
+    </div>
+  </div>
+
+  <!-- Pane 2: History -->
+  <div class="pane">
+    <div class="pane-header">変更履歴</div>
+    <div class="pane-body" id="snapshot-list">
+      <div class="empty">ファイルを選択してください</div>
+    </div>
+  </div>
+
+  <!-- Pane 3: Content -->
+  <div class="pane">
+    <div class="content-toolbar">
+      <button id="btn-diff" class="ghost active-view" disabled>差分</button>
+      <button id="btn-full" class="ghost" disabled>全文</button>
+    </div>
+    <div class="content-body" id="content-body">
+      <div class="empty">スナップショットを選択してください</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Status bar ── -->
+<footer>
+  <span id="status-left">準備完了</span>
+  <span id="status-right" id="status-right"></span>
+</footer>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let allFiles        = [];
+  let currentSnapshots = [];
+  let selectedFileId   = null;
+  let selectedSnapId   = null;
+  let viewMode         = 'diff';    // 'diff' | 'full'
+  let checkedFileIds   = new Set();
+
+  // ── DOM refs ───────────────────────────────────────────────────────────
+  const fileListEl     = document.getElementById('file-list');
+  const snapListEl     = document.getElementById('snapshot-list');
+  const contentBodyEl  = document.getElementById('content-body');
+  const fileCountEl    = document.getElementById('file-count');
+  const statusLeft     = document.getElementById('status-left');
+  const btnExportSel   = document.getElementById('btn-export-selected');
+  const btnExportAll   = document.getElementById('btn-export-all');
+  const btnRefresh     = document.getElementById('btn-refresh');
+  const btnDiff        = document.getElementById('btn-diff');
+  const btnFull        = document.getElementById('btn-full');
+
+  // ── Utilities ──────────────────────────────────────────────────────────
+  function setStatus(msg) { statusLeft.textContent = msg; }
+
+  function fmtDate(isoStr) {
+    // Backend stores UTC ISO strings; append 'Z' if missing
+    const d = new Date(isoStr.endsWith('Z') ? isoStr : isoStr + 'Z');
+    return d.toLocaleString('ja-JP');
+  }
+
+  function triggerDownload(url, filename) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // ── File list ──────────────────────────────────────────────────────────
+  async function loadFiles() {
+    setStatus('読み込み中...');
+    try {
+      const res = await fetch('/api/files');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allFiles = await res.json();
+      fileCountEl.textContent = `(${allFiles.length})`;
+      renderFiles();
+      setStatus(`${allFiles.length} ファイル`);
+    } catch (e) {
+      setStatus('エラー: ' + e.message);
+    }
+  }
+
+  function renderFiles() {
+    if (allFiles.length === 0) {
+      fileListEl.innerHTML = '<div class="empty">ファイルなし（まだ変更が検出されていません）</div>';
+      return;
+    }
+    fileListEl.innerHTML = '';
+    allFiles.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'file-item' + (f.id === selectedFileId ? ' active' : '');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = checkedFileIds.has(f.id);
+      cb.addEventListener('change', e => {
+        e.stopPropagation();
+        checkedFileIds.has(f.id) ? checkedFileIds.delete(f.id) : checkedFileIds.add(f.id);
+        updateExportBtn();
+      });
+
+      const span = document.createElement('span');
+      span.className = 'file-path';
+      span.textContent = f.path;
+
+      div.appendChild(cb);
+      div.appendChild(span);
+      div.addEventListener('click', () => selectFile(f.id));
+      fileListEl.appendChild(div);
+    });
+  }
+
+  function updateExportBtn() {
+    btnExportSel.disabled = checkedFileIds.size === 0;
+  }
+
+  // ── Snapshot list ──────────────────────────────────────────────────────
+  async function selectFile(fileId) {
+    selectedFileId  = fileId;
+    selectedSnapId  = null;
+    currentSnapshots = [];
+    renderFiles();
+    contentBodyEl.innerHTML = '<div class="empty">スナップショットを選択してください</div>';
+    setViewButtons(false);
+
+    try {
+      const res = await fetch(`/api/files/${fileId}/snapshots`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      currentSnapshots = await res.json();
+      renderSnapshots();
+    } catch (e) {
+      snapListEl.innerHTML = `<div class="empty">エラー: ${e.message}</div>`;
+    }
+  }
+
+  function renderSnapshots() {
+    if (currentSnapshots.length === 0) {
+      snapListEl.innerHTML = '<div class="empty">履歴なし</div>';
+      return;
+    }
+    snapListEl.innerHTML = '';
+    currentSnapshots.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'snap-item' + (s.id === selectedSnapId ? ' active' : '');
+      div.innerHTML =
+        `<div class="snap-ts">${fmtDate(s.timestamp)}</div>` +
+        `<span class="snap-ev ${s.event_type}">${s.event_type}</span>`;
+      div.addEventListener('click', () => selectSnapshot(s.id));
+      snapListEl.appendChild(div);
+    });
+  }
+
+  // ── Content view ───────────────────────────────────────────────────────
+  async function selectSnapshot(snapId) {
+    selectedSnapId = snapId;
+    renderSnapshots();
+    setViewButtons(true);
+    await loadContent();
+  }
+
+  async function loadContent() {
+    if (!selectedSnapId) return;
+    contentBodyEl.innerHTML = '<div class="empty">読み込み中...</div>';
+    try {
+      if (viewMode === 'diff') {
+        const res = await fetch(`/api/snapshots/${selectedSnapId}/diff`);
+        const data = await res.json();
+        renderDiff(data.diff);
+      } else {
+        const res = await fetch(`/api/snapshots/${selectedSnapId}`);
+        const data = await res.json();
+        renderFull(data.content, data.event_type);
+      }
+    } catch (e) {
+      contentBodyEl.innerHTML = `<div class="empty">エラー: ${e.message}</div>`;
+    }
+  }
+
+  function renderDiff(diff) {
+    if (!diff) {
+      contentBodyEl.innerHTML = '<div class="empty">差分なし（初回スナップショット、または変更なし）</div>';
+      return;
+    }
+    const pre = document.createElement('pre');
+    diff.split('\n').forEach(line => {
+      const span = document.createElement('span');
+      if      (line.startsWith('+') && !line.startsWith('+++')) span.className = 'diff-add';
+      else if (line.startsWith('-') && !line.startsWith('---')) span.className = 'diff-del';
+      else if (line.startsWith('@@'))                           span.className = 'diff-hunk';
+      else if (line.startsWith('---') || line.startsWith('+++')) span.className = 'diff-meta';
+      span.textContent = line + '\n';
+      pre.appendChild(span);
+    });
+    contentBodyEl.innerHTML = '';
+    contentBodyEl.appendChild(pre);
+  }
+
+  function renderFull(content, eventType) {
+    if (content === null || content === undefined) {
+      const label = eventType === 'deleted' ? '（このスナップショットは削除イベントです）' : '（コンテンツなし）';
+      contentBodyEl.innerHTML = `<div class="empty">${label}</div>`;
+      return;
+    }
+    const pre = document.createElement('pre');
+    pre.textContent = content;
+    contentBodyEl.innerHTML = '';
+    contentBodyEl.appendChild(pre);
+  }
+
+  function setViewButtons(enabled) {
+    btnDiff.disabled = !enabled;
+    btnFull.disabled = !enabled;
+  }
+
+  // ── View toggle ────────────────────────────────────────────────────────
+  btnDiff.addEventListener('click', () => {
+    if (viewMode === 'diff') return;
+    viewMode = 'diff';
+    btnDiff.classList.add('active-view');
+    btnFull.classList.remove('active-view');
+    loadContent();
+  });
+
+  btnFull.addEventListener('click', () => {
+    if (viewMode === 'full') return;
+    viewMode = 'full';
+    btnFull.classList.add('active-view');
+    btnDiff.classList.remove('active-view');
+    loadContent();
+  });
+
+  // ── Export ─────────────────────────────────────────────────────────────
+  btnExportSel.addEventListener('click', () => {
+    if (checkedFileIds.size === 0) return;
+    const ids = Array.from(checkedFileIds).join(',');
+    triggerDownload(`/api/export?file_ids=${ids}`, 'dirtracker_selected.zip');
+  });
+
+  btnExportAll.addEventListener('click', () => {
+    triggerDownload('/api/export', 'dirtracker_all.zip');
+  });
+
+  // ── Refresh ────────────────────────────────────────────────────────────
+  btnRefresh.addEventListener('click', () => loadFiles());
+
+  // Auto-refresh every 15 s (file list only; keeps current selection)
+  setInterval(() => {
+    loadFiles().then(() => {
+      // Re-render snapshots if a file is selected (counts may have changed)
+      if (selectedFileId !== null) {
+        fetch(`/api/files/${selectedFileId}/snapshots`)
+          .then(r => r.json())
+          .then(snaps => {
+            currentSnapshots = snaps;
+            renderSnapshots();
+          })
+          .catch(() => {});
+      }
+    });
+  }, 15000);
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  loadFiles();
+</script>
+</body>
+</html>

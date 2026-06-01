@@ -1,0 +1,49 @@
+services:
+  backend:
+    build: ./backend
+    container_name: dirtracker-backend
+    ports:
+      # デフォルトは localhost のみ公開
+      # LAN からアクセスしたい場合は UI_BIND_HOST=0.0.0.0 を指定
+      - "${UI_BIND_HOST:-127.0.0.1}:41730:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      - DB_PATH=/data/dirtracker.db
+      - DIRTRACKER_LOG_LEVEL=${DIRTRACKER_LOG_LEVEL:-INFO}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/files')"]
+      interval: 60s
+      timeout: 5s
+      retries: 10
+
+  watcher:
+    build: ./watcher
+    container_name: dirtracker-watcher
+    volumes:
+      # 監視対象ディレクトリをマウント（読み取り専用）
+      # デフォルト: /etc のみ
+      - /etc:/watch/etc:ro
+      # 追加ディレクトリの例（コメントを外して追加）:
+      # - /home:/watch/home:ro
+      # - /var:/watch/var:ro
+      # - /opt:/watch/opt:ro
+    environment:
+      - BACKEND_URL=http://backend:8000
+      # 監視ディレクトリをカンマ区切りで指定（上の volumes と対応させること）
+      - WATCH_DIRS=/watch/etc
+      # 追加ディレクトリの例:
+      # - WATCH_DIRS=/watch/etc,/watch/home,/watch/var
+      # コンテナ内パスからホストの実パスに戻すプレフィックス
+      - WATCH_PREFIX_STRIP=/watch
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default:
+    name: dirtracker-net
+    # 外部ネットワークへのアクセスを禁止（同一ネットワークのサービス間通信のみ許可）
+    # internal: true

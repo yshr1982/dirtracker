@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dirtracker マニュアル</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --fg: #1f2933;
+      --muted: #52606d;
+      --line: #d9e2ec;
+      --accent: #0b7285;
+      --accent-soft: #e3f7fb;
+      --warn: #8b5e34;
+      --warn-soft: #fff4e6;
+      --code-bg: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      color: var(--fg);
+      background:
+        radial-gradient(circle at 15% -10%, #d9f2ff 0%, transparent 50%),
+        radial-gradient(circle at 100% 0%, #edf7e9 0%, transparent 45%),
+        var(--bg);
+      line-height: 1.7;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0b7285, #1f9fb8);
+      color: #fff;
+      padding: 36px 20px 28px;
+      border-bottom: 4px solid #095d6c;
+    }
+
+    .header-inner {
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 2.8vw, 2.4rem);
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      opacity: 0.95;
+      font-size: 0.98rem;
+    }
+
+    main {
+      max-width: 1040px;
+      margin: 20px auto 60px;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    nav {
+      align-self: start;
+      position: sticky;
+      top: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+
+    nav h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+
+    nav ol {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 0.94rem;
+    }
+
+    nav li { margin: 6px 0; }
+
+    nav a {
+      color: #0f5f6d;
+      text-decoration: none;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    article section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+      color: #0f5f6d;
+    }
+
+    h3 {
+      margin: 16px 0 8px;
+      font-size: 1.05rem;
+      color: #1f2933;
+    }
+
+    p, li { font-size: 0.97rem; }
+
+    ul, ol { margin: 8px 0 0; padding-left: 24px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.93rem;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f0f8fa;
+      text-align: left;
+    }
+
+    code {
+      font-family: "JetBrains Mono", "Consolas", monospace;
+      background: var(--code-bg);
+      border: 1px solid #dce7f2;
+      border-radius: 6px;
+      padding: 1px 5px;
+      font-size: 0.9em;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid #dce7f2;
+      border-radius: 10px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 8px 0 0;
+    }
+
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .warn {
+      background: var(--warn-soft);
+      border-left: 4px solid #c17b32;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      color: #513117;
+    }
+
+    footer {
+      max-width: 1040px;
+      margin: 0 auto 36px;
+      padding: 0 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>dirtracker マニュアル</h1>
+      <p class="subtitle">/etc などの設定ファイル変更を記録し、差分確認と ZIP エクスポートを行うための運用ガイド</p>
+    </div>
+  </header>
+
+  <main>
+    <nav aria-label="目次">
+      <h2>目次</h2>
+      <ol>
+        <li><a href="#overview">概要</a></li>
+        <li><a href="#architecture">構成</a></li>
+        <li><a href="#startup">起動手順</a></li>
+        <li><a href="#operations">日常運用</a></li>
+        <li><a href="#ui">画面の使い方</a></li>
+        <li><a href="#api">API リファレンス</a></li>
+        <li><a href="#backup">バックアップと復旧</a></li>
+        <li><a href="#troubleshoot">トラブルシュート</a></li>
+      </ol>
+    </nav>
+
+    <article>
+      <section id="overview">
+        <h2>1. 概要</h2>
+        <p>
+          dirtracker は、Linux の設定ディレクトリを監視し、ファイル変更履歴を SQLite に保存するツールです。
+          Web UI で履歴の確認、差分表示、最新版または指定スナップショットを ZIP でエクスポートできます。
+        </p>
+        <ul>
+          <li>監視対象例: <code>/etc</code>（必要に応じて <code>/home</code> などを追加可能）</li>
+          <li>記録内容: 変更時刻、イベント種別、ファイル全文、前回との差分</li>
+          <li>出力: フォルダ構造を保持した ZIP</li>
+        </ul>
+      </section>
+
+      <section id="architecture">
+        <h2>2. 構成</h2>
+        <table>
+          <thead>
+            <tr><th>レイヤー</th><th>内容</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Watcher</td><td>inotify でファイルイベントを監視し、一定間隔でバックエンドへ送信</td></tr>
+            <tr><td>Backend</td><td>FastAPI で履歴保存 API と Web UI を提供</td></tr>
+            <tr><td>Database</td><td>SQLite（<code>./data/dirtracker.db</code>）に履歴を蓄積</td></tr>
+            <tr><td>Frontend</td><td>3 ペイン UI（ファイル一覧 / 変更履歴 / 差分・全文表示）</td></tr>
+          </tbody>
+        </table>
+        <div class="note">
+          外部ネットワークアクセスは Docker の internal network で制限され、サービス間通信のみ許可されます。
+        </div>
+      </section>
+
+      <section id="startup">
+        <h2>3. 起動手順</h2>
+        <h3>3-1. 前提条件</h3>
+        <ul>
+          <li>Docker と Docker Compose が利用可能であること</li>
+          <li>監視対象ディレクトリを読み取り専用でマウント可能であること</li>
+        </ul>
+
+        <h3>3-2. 起動</h3>
+        <pre><code>cd dirtracker
+docker compose up --build</code></pre>
+        <p>起動後、ブラウザで <code>http://localhost:8000</code> にアクセスします。</p>
+
+        <h3>3-3. 監視対象を追加する</h3>
+        <p><code>docker-compose.yml</code> の watcher 設定で、<code>volumes</code> と <code>WATCH_DIRS</code> を対応させて追加します。</p>
+        <pre><code>watcher:
+  volumes:
+    - /etc:/watch/etc:ro
+    - /home:/watch/home:ro
+  environment:
+    - WATCH_DIRS=/watch/etc,/watch/home
+    - WATCH_PREFIX_STRIP=/watch</code></pre>
+        <div class="warn">
+          <strong>注意:</strong> <code>WATCH_DIRS</code> と <code>volumes</code> が一致しない場合、監視が開始されません。
+        </div>
+      </section>
+
+      <section id="operations">
+        <h2>4. 日常運用</h2>
+        <h3>4-1. ログ確認</h3>
+        <pre><code>docker compose logs -f backend
+docker compose logs -f watcher</code></pre>
+
+        <h3>4-2. 停止・再起動</h3>
+        <pre><code>docker compose stop
+docker compose start</code></pre>
+
+        <h3>4-3. 完全停止</h3>
+        <pre><code>docker compose down</code></pre>
+
+        <h3>4-4. バッチ送信間隔の調整</h3>
+        <p>Watcher は既定で 60 秒ごとにイベントをまとめて送信します。短くする場合は環境変数を追加します。</p>
+        <pre><code>environment:
+  - BATCH_WINDOW_SECONDS=30</code></pre>
+      </section>
+
+      <section id="ui">
+        <h2>5. 画面の使い方</h2>
+        <h3>5-1. 左ペイン: ファイル一覧</h3>
+        <ul>
+          <li>クリックで対象ファイルを選択</li>
+          <li>チェックボックスで複数ファイルを選択し、まとめてエクスポート</li>
+        </ul>
+
+        <h3>5-2. 中央ペイン: 変更履歴</h3>
+        <ul>
+          <li>時系列（新しい順）でスナップショットを表示</li>
+          <li>イベント種別: <code>modified</code> / <code>created</code> / <code>deleted</code></li>
+        </ul>
+
+        <h3>5-3. 右ペイン: コンテンツ表示</h3>
+        <ul>
+          <li>「差分」: 直前スナップショットとの差分を表示</li>
+          <li>「全文」: 当該時点のファイル全文を表示</li>
+        </ul>
+
+        <h3>5-4. ヘッダー操作</h3>
+        <ul>
+          <li>選択をエクスポート: チェック済みファイルの最新版を ZIP 化</li>
+          <li>全ファイルをエクスポート: 全ファイルの最新版を ZIP 化</li>
+          <li>更新: 一覧を即時再取得（自動更新は 15 秒ごと）</li>
+        </ul>
+      </section>
+
+      <section id="api">
+        <h2>6. API リファレンス</h2>
+        <table>
+          <thead>
+            <tr><th>Method</th><th>Path</th><th>用途</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>GET</td><td><code>/api/files</code></td><td>監視ファイル一覧を取得</td></tr>
+            <tr><td>GET</td><td><code>/api/files/{id}/snapshots</code></td><td>ファイル単位の履歴取得</td></tr>
+            <tr><td>GET</td><td><code>/api/snapshots/{id}</code></td><td>スナップショット全文取得</td></tr>
+            <tr><td>GET</td><td><code>/api/snapshots/{id}/diff</code></td><td>差分取得</td></tr>
+            <tr><td>POST</td><td><code>/api/ingest</code></td><td>単発イベント取り込み</td></tr>
+            <tr><td>POST</td><td><code>/api/ingest/batch</code></td><td>バッチイベント取り込み</td></tr>
+            <tr><td>GET</td><td><code>/api/export</code></td><td>ZIP エクスポート</td></tr>
+          </tbody>
+        </table>
+
+        <h3>6-1. エクスポート API</h3>
+        <ul>
+          <li><code>/api/export</code>: 全ファイル最新版</li>
+          <li><code>/api/export?file_ids=1,2</code>: 指定ファイル最新版</li>
+          <li><code>/api/export?snapshot_ids=10,11</code>: 指定時点の内容</li>
+        </ul>
+      </section>
+
+      <section id="backup">
+        <h2>7. バックアップと復旧</h2>
+        <h3>7-1. バックアップ</h3>
+        <p>履歴データは <code>./data/dirtracker.db</code> に保存されます。定期的にコピーを取得してください。</p>
+        <pre><code>cp ./data/dirtracker.db ./data/dirtracker.db.bak</code></pre>
+
+        <h3>7-2. 復旧</h3>
+        <p>サービス停止後に DB ファイルを戻して再起動します。</p>
+        <pre><code>docker compose down
+      cp ./data/dirtracker.db.bak ./data/dirtracker.db
+docker compose up -d</code></pre>
+cp ./data/dirtracker.db.bak ./data/dirtracker.db
+docker compose up -d</code></pre>
+      </section>
+
+      <section id="troubleshoot">
+        <h2>8. トラブルシュート</h2>
+        <h3>8-1. 画面にファイルが出ない</h3>
+        <ul>
+          <li>監視対象で実際に変更が発生しているか確認</li>
+          <li>Watcher ログで監視開始メッセージとエラーを確認</li>
+          <li><code>WATCH_DIRS</code> とマウント設定の不一致がないか確認</li>
+        </ul>
+
+        <h3>8-2. 差分が空になる</h3>
+        <ul>
+          <li>初回スナップショットは比較元がないため差分なし</li>
+          <li>同一内容で更新された場合も差分が空になる場合あり</li>
+        </ul>
+
+        <h3>8-3. バイナリファイルが記録されない</h3>
+        <p>Watcher は UTF-8 テキストを対象にしており、バイナリや読み取り不可ファイルはスキップします。</p>
+
+        <h3>8-4. LAN から UI に接続したい</h3>
+        <p>既定では localhost のみ公開です。必要時は起動前に環境変数を指定します。</p>
+        <pre><code>UI_BIND_HOST=0.0.0.0 docker compose up -d</code></pre>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    最終更新: 2026-06-01 / 対象バージョン: 現行 dirtracker 構成
+  </footer>
+</body>
+</html>
