@@ -1,0 +1,14 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Agentic coding related config/skill files
+.instructions.md
+.prompt.md
+.agent.md
+SKILL.md
+copilot-instructions.md
+AGENTS.md
